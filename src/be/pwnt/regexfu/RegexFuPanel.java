@@ -176,6 +176,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 	}
 
 	private void build() {
+		setBorder(BorderFactory.createEmptyBorder());
 		JPanel modifiersPanel = new JPanel(new GridLayout(2,
 				(MODIFIERS.length + 1) / 2, 0, 0));
 		modifierButtons = new Vector<ModifierButton>(4);
@@ -196,6 +197,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		topPanel.add(modifiersPanel, BorderLayout.LINE_END);
 		add(topPanel);
 		JSplitPane bottomPanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		bottomPanel.setBorder(BorderFactory.createEmptyBorder());
 		bottomPanel.setResizeWeight(0.5);
 		subjectArea = new JTextArea(SUBJECT_LINES, 1);
 		subjectArea.setLineWrap(false);
