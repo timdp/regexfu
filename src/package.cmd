@@ -1,2 +1,3 @@
 @echo off
-jar cfm ../regexfu.jar META-INF/MANIFEST.MF be
+set version=0.3
+jar cfm ../regexfu-%version%.jar META-INF/MANIFEST.MF be
