@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.2
+ * Regex-Fu! v0.2.1
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -21,13 +21,16 @@ package be.pwnt.regexfu;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;
+import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -37,6 +40,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -48,7 +52,7 @@ import javax.swing.text.Highlighter.HighlightPainter;
 /**
  * It's Regex-Fu!
  * 
- * @version 0.2
+ * @version 0.2.1
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
@@ -57,7 +61,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.2";
+	private static final String PRODUCT_VERSION = "0.2.1";
 
 	private static final int REGEX_LINES = 3;
 
@@ -189,9 +193,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		JPanel topPanel = new JPanel(new BorderLayout(0, 0));
 		topPanel.setBorder(BorderFactory
 				.createTitledBorder("Regular Expression"));
-		regexArea = new JTextArea(REGEX_LINES, REGEX_COLUMNS);
-		regexArea.setLineWrap(true);
-		regexArea.setWrapStyleWord(false);
+		regexArea = newTextArea(REGEX_LINES, REGEX_COLUMNS);
 		regexArea.getDocument().addDocumentListener(this);
 		topPanel.add(new JScrollPane(regexArea), BorderLayout.CENTER);
 		topPanel.add(modifiersPanel, BorderLayout.LINE_END);
@@ -199,8 +201,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		JSplitPane bottomPanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		bottomPanel.setBorder(BorderFactory.createEmptyBorder());
 		bottomPanel.setResizeWeight(0.5);
-		subjectArea = new JTextArea(SUBJECT_LINES, 1);
-		subjectArea.setLineWrap(false);
+		subjectArea = newTextArea(SUBJECT_LINES, 1);
 		subjectArea.getDocument().addDocumentListener(this);
 		JPanel subjectPanel = new JPanel(new BorderLayout(0, 0));
 		subjectPanel.setBorder(BorderFactory.createTitledBorder("Subject"));
@@ -221,7 +222,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		buttonPanel.add(resetButton);
 		subjectPanel.add(buttonPanel, BorderLayout.PAGE_END);
 		bottomPanel.add(subjectPanel);
-		resultArea = new JTextArea(RESULT_LINES, 1);
+		resultArea = newTextArea(RESULT_LINES, 1);
 		resultArea.setEditable(false);
 		JPanel resultPanel = new JPanel(new BorderLayout(0, 0));
 		resultPanel.setBorder(BorderFactory.createTitledBorder("Result"));
@@ -234,6 +235,30 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 			highlightPainters[i] = new DefaultHighlightPainter(
 					HIGHLIGHT_COLORS[i]);
 		}
+		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
+				KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0), "find");
+		getActionMap().put("find", new AbstractAction() {
+			private static final long serialVersionUID = -1033343899331562399L;
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (nextMatchButton.isEnabled()) {
+					findNextMatch();
+				} else if (firstMatchButton.isEnabled()) {
+					findFirstMatch();
+				}
+			}
+		});
+	}
+
+	private static JTextArea newTextArea(int rows, int cols) {
+		JTextArea area = new JTextArea(rows, cols);
+		// Enable tabbing
+		area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
+				null);
+		area.setFocusTraversalKeys(
+				KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
+		return area;
 	}
 
 	@Override
