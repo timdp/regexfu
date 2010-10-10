@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.3
+ * Regex-Fu! v0.3.1
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,8 @@ import java.awt.GridLayout;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -54,16 +56,16 @@ import javax.swing.text.Highlighter.HighlightPainter;
 /**
  * It's Regex-Fu!
  * 
- * @version 0.3
+ * @version 0.3.1
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
-		DocumentListener {
+		KeyListener, DocumentListener {
 	private static final long serialVersionUID = 2732315785172243459L;
 
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.3";
+	private static final String PRODUCT_VERSION = "0.3.1";
 
 	private static final int PATTERN_LINES = 4;
 
@@ -221,10 +223,18 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 	}
 
 	private void updateHistoryView() {
-		prevButton.setEnabled(historyIndex > 0);
-		nextButton.setEnabled(historyIndex < history.size() - 1);
+		prevButton.setEnabled(previousExists());
+		nextButton.setEnabled(nextExists());
 		historyIndexLabel.setText(history.isEmpty() ? "" : ""
 				+ (historyIndex + 1));
+	}
+
+	private boolean previousExists() {
+		return historyIndex > 0;
+	}
+
+	private boolean nextExists() {
+		return historyIndex < history.size() - 1;
 	}
 
 	private void buildInterface() {
@@ -255,6 +265,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 				.getString("regularExpressionTitle")));
 		regexArea = newTextArea(PATTERN_LINES, PATTERN_COLUMNS);
 		regexArea.getDocument().addDocumentListener(this);
+		regexArea.addKeyListener(this);
 		topPanel.add(new JScrollPane(regexArea), BorderLayout.CENTER);
 		topPanel.add(optionsPanel, BorderLayout.LINE_END);
 		add(topPanel);
@@ -360,6 +371,29 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		} else if (e.getSource() instanceof JToggleButton) {
 			problemChanged();
 		}
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		if (e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
+			if (e.getKeyCode() == KeyEvent.VK_UP) {
+				if (previousExists()) {
+					seek(-1);
+				}
+			} else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+				if (nextExists()) {
+					seek(1);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
 	}
 
 	@Override
