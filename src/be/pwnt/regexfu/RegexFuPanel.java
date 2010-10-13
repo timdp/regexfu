@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.3.1
+ * Regex-Fu! v0.3.2
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ package be.pwnt.regexfu;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
@@ -56,7 +57,7 @@ import javax.swing.text.Highlighter.HighlightPainter;
 /**
  * It's Regex-Fu!
  * 
- * @version 0.3.1
+ * @version 0.3.2
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
@@ -65,17 +66,11 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.3.1";
+	private static final String PRODUCT_VERSION = "0.3.2";
 
-	private static final int PATTERN_LINES = 4;
+	private static final Dimension DEFAULT_SIZE = new Dimension(700, 500);
 
-	private static final int PATTERN_COLUMNS = 80;
-
-	private static final int REGEX_SPACING = 5;
-
-	private static final int SUBJECT_LINES = 12;
-
-	private static final int RESULT_LINES = 8;
+	private static final int SPACING = 5;
 
 	private static final Color[] HIGHLIGHT_COLORS = new Color[] { Color.yellow,
 			Color.cyan, Color.magenta };
@@ -126,6 +121,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		bundle = ResourceBundle.getBundle(getClass().getCanonicalName());
 		createActions();
 		buildInterface();
+		setPreferredSize(DEFAULT_SIZE);
 		history = new Vector<Pattern>();
 		reset();
 	}
@@ -225,7 +221,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 	private void updateHistoryView() {
 		prevButton.setEnabled(previousExists());
 		nextButton.setEnabled(nextExists());
-		historyIndexLabel.setText(history.isEmpty() ? "" : ""
+		historyIndexLabel.setText(history.isEmpty() ? " " : ""
 				+ (historyIndex + 1));
 	}
 
@@ -250,20 +246,20 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		}
 		prevButton = new JButton("" + (char) 0x25B2);
 		prevButton.addActionListener(this);
-		historyIndexLabel = new JLabel("", JLabel.CENTER);
+		historyIndexLabel = new JLabel(" ", JLabel.CENTER);
 		nextButton = new JButton("" + (char) 0x25BC);
 		nextButton.addActionListener(this);
-		JPanel historyPanel = new JPanel(new BorderLayout(0, 0));
+		JPanel historyPanel = new JPanel(new BorderLayout(0, SPACING));
 		historyPanel.add(prevButton, BorderLayout.PAGE_START);
 		historyPanel.add(historyIndexLabel, BorderLayout.CENTER);
 		historyPanel.add(nextButton, BorderLayout.PAGE_END);
-		JPanel optionsPanel = new JPanel(new BorderLayout(REGEX_SPACING, 0));
+		JPanel optionsPanel = new JPanel(new BorderLayout(SPACING, 0));
 		optionsPanel.add(modifiersPanel, BorderLayout.CENTER);
 		optionsPanel.add(historyPanel, BorderLayout.LINE_END);
-		JPanel topPanel = new JPanel(new BorderLayout(REGEX_SPACING, 0));
+		JPanel topPanel = new JPanel(new BorderLayout(SPACING, 0));
 		topPanel.setBorder(BorderFactory.createTitledBorder(bundle
 				.getString("regularExpressionTitle")));
-		regexArea = newTextArea(PATTERN_LINES, PATTERN_COLUMNS);
+		regexArea = newTextArea();
 		regexArea.getDocument().addDocumentListener(this);
 		regexArea.addKeyListener(this);
 		topPanel.add(new JScrollPane(regexArea), BorderLayout.CENTER);
@@ -272,7 +268,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		JSplitPane bottomPanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		bottomPanel.setBorder(BorderFactory.createEmptyBorder());
 		bottomPanel.setResizeWeight(0.5);
-		subjectArea = newTextArea(SUBJECT_LINES, 1);
+		subjectArea = newTextArea();
 		subjectArea.getDocument().addDocumentListener(this);
 		JPanel subjectPanel = new JPanel(new BorderLayout(0, 0));
 		subjectPanel.setBorder(BorderFactory.createTitledBorder(bundle
@@ -296,7 +292,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		buttonPanel.add(resetButton);
 		subjectPanel.add(buttonPanel, BorderLayout.PAGE_END);
 		bottomPanel.add(subjectPanel);
-		resultArea = newTextArea(RESULT_LINES, 1);
+		resultArea = newTextArea();
 		resultArea.setEditable(false);
 		JPanel resultPanel = new JPanel(new BorderLayout(0, 0));
 		resultPanel.setBorder(BorderFactory.createTitledBorder(bundle
@@ -352,8 +348,8 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 				name);
 	}
 
-	private static JTextArea newTextArea(int rows, int cols) {
-		JTextArea area = new JTextArea(rows, cols);
+	private static JTextArea newTextArea() {
+		JTextArea area = new JTextArea();
 		// Enable tabbing
 		area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
 				null);
