@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.3.2
+ * Regex-Fu! v0.4
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -28,8 +28,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.Stack;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,25 +53,27 @@ import javax.swing.JToggleButton;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
+import javax.swing.text.Highlighter;
+import javax.swing.text.Highlighter.Highlight;
 import javax.swing.text.Highlighter.HighlightPainter;
 
 /**
  * It's Regex-Fu!
  * 
- * @version 0.3.2
+ * @version 0.4
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
-		KeyListener, DocumentListener {
-	private static final long serialVersionUID = 2732315785172243459L;
-
+		KeyListener, DocumentListener, CaretListener {
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.3.2";
+	private static final String PRODUCT_VERSION = "0.4";
 
 	private static final Dimension DEFAULT_SIZE = new Dimension(700, 500);
 
@@ -77,10 +84,34 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	private static final Color ERROR_COLOR = Color.red;
 
+	private static final Color BRACKET_MATCH_COLOR = Color.green;
+
 	private static final char[] MODIFIERS = new char[] { 'i', 'm', 's', 'x' };
 
 	private static final int[] FLAGS = new int[] { Pattern.CASE_INSENSITIVE,
 			Pattern.MULTILINE, Pattern.DOTALL, Pattern.COMMENTS };
+
+	private static final Set<Character> OPENING_BRACES = new HashSet<Character>();
+
+	private static final Map<Character, Character> CLOSING_BRACES = new HashMap<Character, Character>();
+
+	private static final HighlightPainter[] HIGHLIGHT_PAINTERS = new HighlightPainter[HIGHLIGHT_COLORS.length];
+
+	private static final HighlightPainter BRACE_PAINTER = new DefaultHighlightPainter(
+			BRACKET_MATCH_COLOR);
+
+	private static final long serialVersionUID = 2732315785172243459L;
+
+	static {
+		CLOSING_BRACES.put(')', '(');
+		CLOSING_BRACES.put(']', '[');
+		CLOSING_BRACES.put('}', '{');
+		OPENING_BRACES.addAll(CLOSING_BRACES.values());
+		for (int i = 0; i < HIGHLIGHT_COLORS.length; i++) {
+			HIGHLIGHT_PAINTERS[i] = new DefaultHighlightPainter(
+					HIGHLIGHT_COLORS[i]);
+		}
+	}
 
 	private JTextArea regexArea;
 
@@ -104,8 +135,6 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	private Color defaultColor;
 
-	private HighlightPainter[] highlightPainters;
-
 	private Matcher matcher;
 
 	private int matchCount;
@@ -114,15 +143,18 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	private int historyIndex;
 
+	private Map<Integer, Integer> braceCache;
+
 	private ResourceBundle bundle;
 
 	public RegexFuPanel() {
 		super(VERTICAL_SPLIT);
 		bundle = ResourceBundle.getBundle(getClass().getCanonicalName());
+		history = new Vector<Pattern>();
+		braceCache = new HashMap<Integer, Integer>();
 		createActions();
 		buildInterface();
 		setPreferredSize(DEFAULT_SIZE);
-		history = new Vector<Pattern>();
 		reset();
 	}
 
@@ -169,8 +201,8 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 			resultArea.append("\n\n");
 		}
 		if (matcher.find()) {
-			HighlightPainter hp = highlightPainters[matchCount
-					% highlightPainters.length];
+			HighlightPainter hp = HIGHLIGHT_PAINTERS[matchCount
+					% HIGHLIGHT_PAINTERS.length];
 			int start = matcher.start(), end = matcher.end();
 			int oldLength = resultArea.getText().length();
 			String title = MessageFormat.format(bundle.getString("matchTitle"),
@@ -261,6 +293,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 				.getString("regularExpressionTitle")));
 		regexArea = newTextArea();
 		regexArea.getDocument().addDocumentListener(this);
+		regexArea.addCaretListener(this);
 		regexArea.addKeyListener(this);
 		topPanel.add(new JScrollPane(regexArea), BorderLayout.CENTER);
 		topPanel.add(optionsPanel, BorderLayout.LINE_END);
@@ -301,11 +334,6 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		bottomPanel.add(resultPanel);
 		add(bottomPanel);
 		defaultColor = resultArea.getForeground();
-		highlightPainters = new HighlightPainter[HIGHLIGHT_COLORS.length];
-		for (int i = 0; i < HIGHLIGHT_COLORS.length; i++) {
-			highlightPainters[i] = new DefaultHighlightPainter(
-					HIGHLIGHT_COLORS[i]);
-		}
 	}
 
 	private void createActions() {
@@ -346,6 +374,35 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		getActionMap().put(name, action);
 		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(key),
 				name);
+	}
+
+	private void updateBraceCache() {
+		braceCache.clear();
+		String regex = regexArea.getText();
+		if (regex.length() < 2)
+			return;
+		Map<Character, Stack<Integer>> stacks = new HashMap<Character, Stack<Integer>>();
+		for (char c : OPENING_BRACES) {
+			stacks.put(c, new Stack<Integer>());
+		}
+		char first = regex.charAt(0);
+		if (OPENING_BRACES.contains(first)) {
+			stacks.get(first).push(0);
+		}
+		for (int i = 1; i < regex.length(); i++) {
+			if (regex.charAt(i - 1) != '\\'
+					|| (i > 1 && regex.charAt(i - 2) == '\\')) {
+				char c = regex.charAt(i);
+				if (OPENING_BRACES.contains(c)) {
+					stacks.get(c).push(i);
+				} else if (CLOSING_BRACES.containsKey(c)
+						&& !stacks.get(CLOSING_BRACES.get(c)).isEmpty()) {
+					int other = stacks.get(CLOSING_BRACES.get(c)).pop();
+					braceCache.put(other, i);
+					braceCache.put(i, other);
+				}
+			}
+		}
 	}
 
 	private static JTextArea newTextArea() {
@@ -395,15 +452,36 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 	@Override
 	public void insertUpdate(DocumentEvent e) {
 		problemChanged();
+		updateBraceCache();
 	}
 
 	@Override
 	public void removeUpdate(DocumentEvent e) {
-		problemChanged();
+		updateBraceCache();
 	}
 
 	@Override
 	public void changedUpdate(DocumentEvent e) {
+	}
+
+	@Override
+	public void caretUpdate(CaretEvent e) {
+		Highlighter hl = regexArea.getHighlighter();
+		// Makes sure we don't remove selection highlights
+		for (Highlight h : hl.getHighlights()) {
+			if (h.getPainter() == BRACE_PAINTER) {
+				hl.removeHighlight(h);
+			}
+		}
+		int pos = regexArea.getCaretPosition();
+		if (braceCache.containsKey(pos)) {
+			int other = braceCache.get(pos);
+			try {
+				hl.addHighlight(pos, pos + 1, BRACE_PAINTER);
+				hl.addHighlight(other, other + 1, BRACE_PAINTER);
+			} catch (BadLocationException ex) {
+			}
+		}
 	}
 
 	private static class ModifierButton extends JToggleButton {
