@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.4
+ * Regex-Fu! v0.4.1
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -66,14 +66,14 @@ import javax.swing.text.Highlighter.HighlightPainter;
 /**
  * It's Regex-Fu!
  * 
- * @version 0.4
+ * @version 0.4.1
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
 		KeyListener, DocumentListener, CaretListener {
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.4";
+	private static final String PRODUCT_VERSION = "0.4.1";
 
 	private static final Dimension DEFAULT_SIZE = new Dimension(700, 500);
 
@@ -405,6 +405,37 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 		}
 	}
 
+	private void updateBraceHighlights() {
+		removeBraceHighlights();
+		int pos = regexArea.getCaretPosition();
+		if (!highlightBrace(pos - 1)) {
+			highlightBrace(pos);
+		}
+	}
+	
+	private void removeBraceHighlights() {
+		Highlighter hl = regexArea.getHighlighter();
+		for (Highlight h : hl.getHighlights()) {
+			if (h.getPainter() == BRACE_PAINTER) {
+				hl.removeHighlight(h);
+			}
+		}
+	}
+
+	private boolean highlightBrace(int pos) {
+		if (!braceCache.containsKey(pos)) {
+			return false;
+		}
+		int other = braceCache.get(pos);
+		Highlighter hl = regexArea.getHighlighter();
+		try {
+			hl.addHighlight(pos, pos + 1, BRACE_PAINTER);
+			hl.addHighlight(other, other + 1, BRACE_PAINTER);
+		} catch (BadLocationException ex) {
+		}
+		return true;
+	}
+
 	private static JTextArea newTextArea() {
 		JTextArea area = new JTextArea();
 		// Enable tabbing
@@ -466,22 +497,7 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 
 	@Override
 	public void caretUpdate(CaretEvent e) {
-		Highlighter hl = regexArea.getHighlighter();
-		// Makes sure we don't remove selection highlights
-		for (Highlight h : hl.getHighlights()) {
-			if (h.getPainter() == BRACE_PAINTER) {
-				hl.removeHighlight(h);
-			}
-		}
-		int pos = regexArea.getCaretPosition();
-		if (braceCache.containsKey(pos)) {
-			int other = braceCache.get(pos);
-			try {
-				hl.addHighlight(pos, pos + 1, BRACE_PAINTER);
-				hl.addHighlight(other, other + 1, BRACE_PAINTER);
-			} catch (BadLocationException ex) {
-			}
-		}
+		updateBraceHighlights();
 	}
 
 	private static class ModifierButton extends JToggleButton {
