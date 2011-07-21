@@ -1,5 +1,5 @@
 /*
- * Regex-Fu! v0.4.2
+ * Regex-Fu! v0.4.3
  * Created by Tim De Pauw <http://pwnt.be/>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -66,14 +66,14 @@ import javax.swing.text.Highlighter.HighlightPainter;
 /**
  * It's Regex-Fu!
  * 
- * @version 0.4.2
+ * @version 0.4.3
  * @author tim@pwnt.be
  */
 public class RegexFuPanel extends JSplitPane implements ActionListener,
 		KeyListener, DocumentListener, CaretListener {
 	private static final String PRODUCT_NAME = "Regex-Fu!";
 
-	private static final String PRODUCT_VERSION = "0.4.2";
+	private static final String PRODUCT_VERSION = "0.4.3";
 
 	private static final Dimension DEFAULT_SIZE = new Dimension(700, 500);
 
@@ -218,11 +218,17 @@ public class RegexFuPanel extends JSplitPane implements ActionListener,
 			resultArea.append(MessageFormat.format(
 					bundle.getString("matchHeader"), title, start, end));
 			String groupMatchFormat = bundle.getString("groupMatch");
+			String groupNoMatchFormat = bundle.getString("groupNoMatch");
 			for (int i = 1; i <= matcher.groupCount(); i++) {
-				resultArea.append("\n"
-						+ MessageFormat.format(groupMatchFormat, i,
-								matcher.start(i), matcher.end(i),
-								matcher.group(i)));
+				if (matcher.start(i) >= 0) {
+					resultArea.append("\n"
+							+ MessageFormat.format(groupMatchFormat, i,
+									matcher.start(i), matcher.end(i),
+									matcher.group(i)));
+				} else {
+					resultArea.append("\n"
+							+ MessageFormat.format(groupNoMatchFormat, i));
+				}
 			}
 			try {
 				subjectArea.getHighlighter().addHighlight(start, end, hp);
